@@ -27,15 +27,8 @@ hw_monitor/
 ├── mac_agent.sh         # (Optional) macOS 真實 SMC 溫度轉發腳本
 └── README.md
 
-1. 使用 Docker 建置環境
 
-建置並啟動虛擬化環境，掛載本地目錄以利即時同步與開發：
-Bash
 
-# 建置 Docker Image
-docker build -t hp_monitor_env .
 
-# 啟動並進入容器 (掛載當前目錄以即時同步)
-docker run -it -v $(pwd):/app hp_monitor_env /bin/bash
 
 
