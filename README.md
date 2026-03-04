@@ -29,3 +29,8 @@ hw_monitor/
 ├── Dockerfile           # Ubuntu 開發環境配置檔
 ├── mac_agent.sh         # macOS 真實 SMC 溫度轉發腳本
 └── README.md
+
+
+
+
+
