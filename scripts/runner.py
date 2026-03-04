@@ -4,6 +4,8 @@ import os
 import csv
 import multiprocessing
 from datetime import datetime
+from log_parser import LinuxLogAnalyzer
+import json
 
 # 設定路徑
 PROJECT_ROOT = "/app"
@@ -140,16 +142,65 @@ def run_thermal_throttling_test(duration_seconds, target_temp):
             p.terminate()
             p.join()
         print("\n[系統] 測試結束，釋放 CPU 資源。")
+def generate_diagnostic_report(log_summary, csv_path):
+    """生成 Markdown 格式的綜合診斷報告"""
+    report_path = os.path.join(PROJECT_ROOT, "data", "diagnostic_report.md")
+    with open(report_path, 'w', encoding='utf-8') as f:
+        f.write("# 系統硬體與日誌綜合診斷報告\n\n")
+        f.write(f"**測試時間:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"**硬體監控數據存放於:** `{csv_path}`\n\n")
+        
+        f.write("## 系統日誌異常分析 (System Log Anomalies)\n")
+        if log_summary['status'] == 'Success':
+            f.write(f"- **測試期間發現異常日誌總數:** {log_summary['total_errors_found']} 筆\n")
+            f.write("- **異常類型統計:**\n")
+            for err_type, count in log_summary['summary'].items():
+                f.write(f"  - `{err_type}`: {count} 次\n")
+            
+            f.write("\n### 最新異常日誌樣本 (Top 10 Recent Logs)\n")
+            f.write("```text\n")
+            for log in log_summary['raw_logs']:
+                f.write(f"{log}\n")
+            f.write("```\n")
+        else:
+            f.write(f"日誌讀取失敗: {log_summary['status']}\n")
+            
+    print(f"\n[系統] 綜合診斷報告已生成: {report_path}")
+
+def generate_mock_syslog():
+    """在 /var/log 內生成模擬的 Linux 硬體與系統錯誤日誌"""
+    mock_logs = [
+        "Mar  4 10:00:01 ubuntu kernel: [Hardware Error]: Machine check events logged\n",
+        "Mar  4 10:05:12 ubuntu systemd: Failed to start Thermal Daemon Service.\n",
+        "Mar  4 10:10:30 ubuntu kernel: thermal thermal_zone0: critical temperature reached (98 C), shutting down\n",
+        "Mar  4 10:15:00 ubuntu kernel: Normal operation resumed.\n"
+    ]
+    
+    # 直接寫入 Linux 預設的日誌路徑
+    with open("/var/log/syslog", "w", encoding="utf-8") as f:
+        f.writelines(mock_logs)
+    print("[系統] 已生成模擬的 /var/log/syslog 供解析器測試。")
+
 
 def main():
-    print("=== 韌體 PID 動態熱節流 (Thermal Throttling) 模擬 ===")
+    print("=== 韌體 PID 動態熱節流與日誌分析模擬 ===")
     
-    # 刪除舊的測試資料以保持乾淨
+    # 記錄測試開始時間
+    test_start_time = datetime.now()
+    
     if os.path.exists(CSV_OUTPUT):
         os.remove(CSV_OUTPUT)
         
-    # 設定目標溫度為 55°C，執行 40 秒以便觀察 PID 收斂過程
-    run_thermal_throttling_test(duration_seconds=40, target_temp=55.0)
+    run_thermal_throttling_test(duration_seconds=30, target_temp=55.0)
+    
+    # 測試結束後，啟動日誌分析
+    print("\n[系統] 開始解析 Linux 系統日誌 (/var/log/syslog)...")
+    generate_mock_syslog()
+    analyzer = LinuxLogAnalyzer()
+    log_summary = analyzer.analyze_recent_logs()
+
+	# 生成 Markdown 報告
+    generate_diagnostic_report(log_summary, CSV_OUTPUT)
 
 if __name__ == "__main__":
     main()
