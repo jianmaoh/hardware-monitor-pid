@@ -27,4 +27,36 @@ hw_monitor/
 
 
 
+## Quick Start
+
+### 1. Fetch the code
+
+```bash
+git clone [https://github.com/jianmaoh/hardware-monitor-pid.git](https://github.com/jianmaoh/hardware-monitor-pid.git)
+cd hardware-monitor-pid
+```
+
+### 2. Build the Docker environment
+
+```bash
+docker build -t hp_monitor_env .
+```
+
+### 3. Launch the container
+
+```bash
+docker run -it -v $(pwd):/app hp_monitor_env /bin/bash
+```
+
+### 4. Compile and run the test
+
+```bash
+g++ src/monitor.cpp -o src/monitor
+python3 scripts/runner.py
+```
+
+
+
+
+
 
