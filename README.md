@@ -25,8 +25,7 @@ hw_monitor/
 └── README.md
 
 
-
-
+```
 ## Quick Start
 
 ### 1. Fetch the code
