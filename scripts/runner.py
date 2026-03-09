@@ -172,19 +172,24 @@ def generate_diagnostic_report(log_summary, csv_path, ai_analysis_result=""):
     print(f"\n[系統] 綜合診斷報告已生成: {report_path}")
 
 def generate_mock_syslog():
-    """在 /var/log 內生成模擬的 Linux 硬體與系統錯誤日誌"""
+    """在 /var/log 內生成模擬的 Linux 硬體與系統錯誤日誌 (共 10 筆)"""
     mock_logs = [
         "Mar  4 10:00:01 ubuntu kernel: [Hardware Error]: Machine check events logged\n",
+        "Mar  4 10:02:15 ubuntu kernel: ACPI Error: AE_NOT_FOUND, While resolving a named reference package element (20210730/dspkginit-438)\n",
         "Mar  4 10:05:12 ubuntu systemd: Failed to start Thermal Daemon Service.\n",
+        "Mar  4 10:06:22 ubuntu kernel: pcieport 0000:00:1c.0: PCIe Bus Error: severity=Corrected, type=Physical Layer, (Receiver ID)\n",
+        "Mar  4 10:08:05 ubuntu kernel: mce: [Hardware Error]: CPU 2: Machine Check: 0 Bank 4: e600000000020408\n",
+        "Mar  4 10:09:10 ubuntu kernel: EDAC MC0: 1 CE memory read error on CPU_SrcID#0_Ha#0_Chan#1_DIMM#0 (channel:1 slot:0 page:0x12345 offset:0x0)\n",
+        "Mar  4 10:09:45 ubuntu kernel: CPU4: Package temperature above threshold, cpu clock throttled (total events = 1)\n",
         "Mar  4 10:10:30 ubuntu kernel: thermal thermal_zone0: critical temperature reached (98 C), shutting down\n",
+        "Mar  4 10:12:05 ubuntu kernel: ACPI Warning: \\_SB.BAT0: Battery state not reporting correctly.\n",
         "Mar  4 10:15:00 ubuntu kernel: Normal operation resumed.\n"
     ]
     
     # 直接寫入 Linux 預設的日誌路徑
     with open("/var/log/syslog", "w", encoding="utf-8") as f:
         f.writelines(mock_logs)
-    print("[系統] 已生成模擬的 /var/log/syslog 供解析器測試。")
-
+    print("[系統] 已生成模擬的 /var/log/syslog (包含 ACPI, MCE, PCIe 錯誤) 供解析器測試。")
 
 def main():
     print("=== 韌體 PID 動態熱節流與日誌分析模擬 ===")
