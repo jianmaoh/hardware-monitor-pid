@@ -5,6 +5,7 @@ import csv
 import multiprocessing
 from datetime import datetime
 from log_parser import LinuxLogAnalyzer
+from ai_agent import FirmwareAIAgent
 import json
 
 # 設定路徑
@@ -142,7 +143,7 @@ def run_thermal_throttling_test(duration_seconds, target_temp):
             p.terminate()
             p.join()
         print("\n[系統] 測試結束，釋放 CPU 資源。")
-def generate_diagnostic_report(log_summary, csv_path):
+def generate_diagnostic_report(log_summary, csv_path, ai_analysis_result=""):
     """生成 Markdown 格式的綜合診斷報告"""
     report_path = os.path.join(PROJECT_ROOT, "data", "diagnostic_report.md")
     with open(report_path, 'w', encoding='utf-8') as f:
@@ -150,20 +151,23 @@ def generate_diagnostic_report(log_summary, csv_path):
         f.write(f"**測試時間:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"**硬體監控數據存放於:** `{csv_path}`\n\n")
         
-        f.write("## 系統日誌異常分析 (System Log Anomalies)\n")
+        f.write("## 1. 系統日誌異常統計 (System Log Anomalies)\n")
         if log_summary['status'] == 'Success':
             f.write(f"- **測試期間發現異常日誌總數:** {log_summary['total_errors_found']} 筆\n")
-            f.write("- **異常類型統計:**\n")
             for err_type, count in log_summary['summary'].items():
                 f.write(f"  - `{err_type}`: {count} 次\n")
             
-            f.write("\n### 最新異常日誌樣本 (Top 10 Recent Logs)\n")
+            f.write("\n### 最新異常日誌樣本\n")
             f.write("```text\n")
             for log in log_summary['raw_logs']:
                 f.write(f"{log}\n")
-            f.write("```\n")
+            f.write("```\n\n")
         else:
-            f.write(f"日誌讀取失敗: {log_summary['status']}\n")
+            f.write(f"日誌讀取失敗: {log_summary['status']}\n\n")
+            
+        # 新增 AI 分析結果區塊
+        f.write("## 2. AI 根本原因分析 (AI-Driven RCA)\n")
+        f.write(ai_analysis_result + "\n")
             
     print(f"\n[系統] 綜合診斷報告已生成: {report_path}")
 
@@ -195,12 +199,19 @@ def main():
     
     # 測試結束後，啟動日誌分析
     print("\n[系統] 開始解析 Linux 系統日誌 (/var/log/syslog)...")
-    generate_mock_syslog()
+    generate_mock_syslog() 
+    
     analyzer = LinuxLogAnalyzer()
     log_summary = analyzer.analyze_recent_logs()
-
-	# 生成 Markdown 報告
-    generate_diagnostic_report(log_summary, CSV_OUTPUT)
+    
+    # 啟動 AI 分析
+    ai_result = "無異常日誌，無需分析。"
+    if log_summary.get('total_errors_found', 0) > 0:
+        print("[系統] 偵測到異常，正在呼叫 AI 進行根本原因分析...")
+        ai_agent = FirmwareAIAgent()
+        ai_result = ai_agent.analyze_error_logs(log_summary['raw_logs'])
+    
+    generate_diagnostic_report(log_summary, CSV_OUTPUT, ai_result)
 
 if __name__ == "__main__":
     main()
