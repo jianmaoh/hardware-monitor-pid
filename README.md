@@ -1,32 +1,31 @@
-## 系統架構
-1. **底層資料擷取 (C++)**：負責即時讀取系統記憶體資訊，並透過 File I/O 接收外部傳遞的真實/模擬硬體溫度。
-2. **自動化與控制 (Python)**：
-   - 實作 **PID 控制器**，根據目標溫度動態調整 CPU 負載比例 (Load Factor)，防止過熱。
-3. **AI 驅動根本原因分析 (Agentic Workflow)**：
-   - 測試結束後自動掃描 Linux `/var/log/syslog` 捕捉異常。
-   - 串接 **Gemini API**，將異常日誌交由 LLM 進行自動化 Root Cause Analysis (RCA)，並產出具備硬體工程師視角的修復建議。
-4. **環境封裝與資安實踐**：使用 Docker 封裝跨平台執行環境，並透過 `.gitignore` 確保 API Key 等敏感資訊不外流。
+## System Architecture
+1. **Low-Level Data Acquisition (C++)**: Responsible for real-time reading of system memory information and receiving real/simulated hardware temperatures passed externally via File I/O.
+2. **Automation and Control (Python)**:
+   - Implements a **PID Controller** to dynamically adjust the CPU load factor based on the target temperature to prevent overheating.
+3. **AI-Driven Root Cause Analysis (Agentic Workflow)**:
+   - Automatically scans Linux `/var/log/syslog` to capture anomalies after the test completes.
+   - Integrates the **Gemini API** to pass anomaly logs to the LLM for automated Root Cause Analysis (RCA), generating repair recommendations from a hardware engineer's perspective.
+4. **Environment Encapsulation & Security Practices**: Uses Docker to encapsulate a cross-platform execution environment and ensures sensitive information like API keys is not leaked via `.gitignore`.
 
-## 專案目錄結構
+## Project Directory Structure
 ```text
 hw_monitor/
 ├── src/
-│   └── monitor.cpp      # C++ 底層數據擷取程式
+│   └── monitor.cpp      # C++ low-level data acquisition program
 ├── scripts/
-│   ├── runner.py        # Python 壓力測試與 PID 控制腳本
-│   ├── log_parser.py    # Linux 系統日誌 Regex 解析模組
-│   └── ai_agent.py      # LLM 根本原因分析 API 串接模組
+│   ├── runner.py        # Python stress test and PID control script
+│   ├── log_parser.py    # Linux system log Regex parsing module
+│   └── ai_agent.py      # LLM RCA API integration module
 ├── data/
-│   ├── pid_thermal_metrics.csv  # 結構化監控數據
-│   └── diagnostic_report.md     # 包含 AI 分析的綜合診斷報告
-├── gemini_api_key.txt   # (Git 忽略) 本機 API 金鑰
-├── Dockerfile           # Ubuntu 開發環境配置檔
-├── mac_agent.sh         # macOS 真實 SMC 溫度轉發腳本 (Host Sensor)
+│   ├── pid_thermal_metrics.csv  # Structured monitoring data
+│   └── diagnostic_report.md     # Comprehensive diagnostic report including AI analysis
+├── gemini_api_key.txt   # (Git ignored) Local API key
+├── Dockerfile           # Ubuntu development environment configuration file
+├── mac_agent.sh         # macOS real SMC temperature forwarding script (Host Sensor)
 └── README.md
 
-
 ```
-## Quick Start
+## Quick Start (For macOS)
 
 ### 1. Fetch the code
 
@@ -47,7 +46,13 @@ docker build -t hp_monitor_env .
 docker run -it -v $(pwd):/app hp_monitor_env /bin/bash
 ```
 
-### 4. Compile and run the test
+### 4. Run mac_agent.sh on another terminal page to get the real-time temperature
+```bash
+./mac_agent.sh 
+```
+
+
+### 5. Compile and run the test
 
 ```bash
 g++ src/monitor.cpp -o src/monitor
