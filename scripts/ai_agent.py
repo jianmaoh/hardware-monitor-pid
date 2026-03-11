@@ -3,15 +3,15 @@ import os
 
 class FirmwareAIAgent:
    def __init__(self):
-        # set thr path of gemini key
+        # 設定密鑰檔案的路徑
         key_file_path = "/app/gemini_api_key.txt"
         self.api_key = None
         
-        # try to get the key locally
-        if os.path.exists(key_file_path):d
+        # 1. 先嘗試讀取密鑰檔案 (本地開發環境)
+        if os.path.exists(key_file_path):
             with open(key_file_path, 'r', encoding='utf-8') as f:
                 self.api_key = f.read().strip()
-        # if the file dont exit, then read the env var on ci/cd
+        # 2. 如果檔案不存在，則嘗試讀取環境變數 (CI/CD 環境)
         else:
             self.api_key = os.environ.get("GEMINI_API_KEY")
                 
