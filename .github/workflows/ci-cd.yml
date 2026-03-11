@@ -1,0 +1,38 @@
+name: Hardware Monitor CI/CD
+
+# Trigger on push or pull request to the main branch
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest # Use the latest Ubuntu cloud environment
+
+    steps:
+    # 1. Checkout the latest code
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Build the Docker image
+    - name: Build Docker Image
+      run: docker build -t hp_monitor_env .
+
+    # 3. Run compilation and test scripts inside Docker
+    - name: Run Compilation and Tests
+      env:
+        # Read the API Key from GitHub Secrets and pass it to the container
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: |
+        docker run --env GEMINI_API_KEY=$GEMINI_API_KEY -v ${{ github.workspace }}:/app hp_monitor_env /bin/bash -c "g++ src/monitor.cpp -o src/monitor && python3 scripts/runner.py"
+
+    # 4. Save test reports (CD concept: artifact packaging)
+    - name: Upload Diagnostic Report Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: hw-diagnostic-reports
+        path: |
+          data/diagnostic_report.md
+          data/pid_thermal_metrics.csv

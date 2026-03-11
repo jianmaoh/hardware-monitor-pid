@@ -2,16 +2,18 @@ import google.generativeai as genai
 import os
 
 class FirmwareAIAgent:
-    def __init__(self):
-        # 設定密鑰檔案的路徑 (對應 Docker 內的掛載位置)
+   def __init__(self):
+        # set thr path of gemini key
         key_file_path = "/app/gemini_api_key.txt"
         self.api_key = None
         
-        # 嘗試讀取密鑰檔案
-        if os.path.exists(key_file_path):
+        # try to get the key locally
+        if os.path.exists(key_file_path):d
             with open(key_file_path, 'r', encoding='utf-8') as f:
-                # 讀取並去除前後可能不小心多打的空白或換行符號
                 self.api_key = f.read().strip()
+        # if the file dont exit, then read the env var on ci/cd
+        else:
+            self.api_key = os.environ.get("GEMINI_API_KEY")
                 
         if self.api_key:
             genai.configure(api_key=self.api_key)
