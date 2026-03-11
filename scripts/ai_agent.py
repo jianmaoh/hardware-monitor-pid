@@ -2,7 +2,7 @@ import google.generativeai as genai
 import os
 
 class FirmwareAIAgent:
-   def __init__(self):
+    def __init__(self):
         # 設定密鑰檔案的路徑
         key_file_path = "/app/gemini_api_key.txt"
         self.api_key = None
@@ -24,7 +24,7 @@ class FirmwareAIAgent:
     def analyze_error_logs(self, logs_list):
         """將錯誤日誌送交 AI 分析並回傳根本原因與建議"""
         if not self.model:
-            return "⚠️ 找不到 /app/gemini_api_key.txt 檔案，跳過 AI 根本原因分析。"
+            return "⚠️ 找不到 /app/gemini_api_key.txt 檔案，也未設定環境變數，跳過 AI 根本原因分析。"
             
         if not logs_list:
             return "無異常日誌需分析。"
@@ -49,3 +49,4 @@ class FirmwareAIAgent:
             return response.text
         except Exception as e:
             return f"AI 分析發生例外錯誤: {e}"
+
