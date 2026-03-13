@@ -8,13 +8,13 @@ from log_parser import LinuxLogAnalyzer
 from ai_agent import FirmwareAIAgent
 import json
 
-# 設定路徑
+# set the path
 PROJECT_ROOT = "/app"
 CPP_EXECUTABLE = os.path.join(PROJECT_ROOT, "src", "monitor")
 CSV_OUTPUT = os.path.join(PROJECT_ROOT, "data", "pid_thermal_metrics.csv")
 
 def run_cpp_monitor():
-    """呼叫 C++ 執行檔並解析輸出"""
+    """Call the C++ executable and parse the output"""
     try:
         result = subprocess.run([CPP_EXECUTABLE], capture_output=True, text=True, check=True)
         output_lines = result.stdout.strip().split('\n')
@@ -28,11 +28,11 @@ def run_cpp_monitor():
                 metrics["mem_free"] = line.split(":")[1].replace("kB", "").strip()
         return metrics
     except Exception as e:
-        print(f"讀取失敗: {e}")
+        print(f"Read failed: {e}")
         return None
 
 def log_to_csv(metrics, target_temp, load_factor):
-    """將 PID 相關數據寫入 CSV"""
+    """Log PID related metrics to CSV"""
     if not metrics:
         return
     file_exists = os.path.isfile(CSV_OUTPUT)
@@ -50,8 +50,8 @@ def log_to_csv(metrics, target_temp, load_factor):
         ])
 
 def cpu_stress_worker(shared_load_factor):
-    """受控的 CPU 負載核心。根據 shared_load_factor (0.0~1.0) 決定運作與休眠比例"""
-    cycle_time = 0.1 # 每個工作週期的總時間 (秒)
+    """Controlled CPU load core. Determines work/sleep ratio based on shared_load_factor (0.0~1.0)"""
+    cycle_time = 0.1 # Total time per work cycle (seconds)
     while True:
         load = shared_load_factor.value
         if load <= 0.01:
@@ -61,7 +61,7 @@ def cpu_stress_worker(shared_load_factor):
         work_time = cycle_time * load
         sleep_time = cycle_time - work_time
         
-        # 執行無意義運算消耗 CPU
+        # Execute meaningless calculations to consume CPU
         start = time.time()
         while time.time() - start < work_time:
             _ = 123456789 * 987654321
@@ -85,8 +85,8 @@ class PIDController:
         if dt <= 0.0:
             dt = 1e-16
             
-        # 誤差定義：如果目標溫度是 55，當前是 50，誤差為 5 (太冷，需要增加負載)
-        # 如果當前是 60，誤差為 -5 (太熱，需要減少負載)
+        # Error definition: If target is 55 and current is 50, error is 5 (too cold, need to increase load)
+        # If current is 60, error is -5 (too hot, need to decrease load)
         error = self.target - current_value
         
         self.integral += error * dt
@@ -101,10 +101,10 @@ class PIDController:
 
 def run_thermal_throttling_test(duration_seconds, target_temp):
     cores = multiprocessing.cpu_count()
-    print(f"\n[系統] 偵測到 {cores} 個 CPU 核心。")
-    print(f"[系統] 開始 PID 動態熱節流測試，目標溫度維持在: {target_temp}°C")
+    print(f"\n[System] Detected {cores} CPU cores.")
+    print(f"[System] Starting PID dynamic thermal throttling test, target temperature maintained at: {target_temp}°C")
     
-    # 建立多進程共享變數，初始負載設為 1.0 (100%)
+    # Create a multi-processing shared variable, initial load set to 1.0 (100%)
     shared_load_factor = multiprocessing.Value('d', 1.0)
     
     processes = []
@@ -113,7 +113,7 @@ def run_thermal_throttling_test(duration_seconds, target_temp):
         p.start()
         processes.append(p)
     
-    # 初始化 PID 控制器 (這些參數 Kp, Ki, Kd 通常需要不斷微調)
+    # Initialize PID controller (Kp, Ki, Kd parameters usually need fine-tuning)
     pid = PIDController(kp=0.1, ki=0.02, kd=0.05, target=target_temp)
     
     end_time = time.time() + duration_seconds
@@ -123,56 +123,57 @@ def run_thermal_throttling_test(duration_seconds, target_temp):
             if metrics:
                 current_temp = metrics['cpu_temp']
                 
-                # 計算 PID 輸出，並限制負載率在 0.0 到 1.0 之間
+                # Calculate PID output, and limit load ratio between 0.0 and 1.0
                 pid_output = pid.compute(current_temp)
                 
-                # 假設預設負載為 0.5，PID 輸出用來微調這個基準
+                # Assume default load is 0.5, PID output is used to fine-tune this baseline
                 new_load = 0.5 + pid_output
-                new_load = max(0.0, min(1.0, new_load)) # 限制在 0~100%
+                new_load = max(0.0, min(1.0, new_load)) # Limit to 0~100%
                 
                 shared_load_factor.value = new_load
                 
                 log_to_csv(metrics, target_temp, new_load)
-                print(f"[{datetime.now().strftime('%H:%M:%S')}] 實際: {current_temp}°C | 目標: {target_temp}°C | CPU 負載分配: {new_load*100:.1f}%")
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] Current: {current_temp}°C | Target: {target_temp}°C | CPU Load Allocation: {new_load*100:.1f}%")
                 
-            time.sleep(1) # 每秒控制一次
+            time.sleep(1) # Control once per second
             
     finally:
-        # 確保無論如何都會關閉子進程
+        # Ensure child processes are terminated no matter what
         for p in processes:
             p.terminate()
             p.join()
-        print("\n[系統] 測試結束，釋放 CPU 資源。")
+        print("\n[System] Test completed, releasing CPU resources.")
+
 def generate_diagnostic_report(log_summary, csv_path, ai_analysis_result=""):
-    """生成 Markdown 格式的綜合診斷報告"""
+    """Generate a comprehensive diagnostic report in Markdown format"""
     report_path = os.path.join(PROJECT_ROOT, "data", "diagnostic_report.md")
     with open(report_path, 'w', encoding='utf-8') as f:
-        f.write("# 系統硬體與日誌綜合診斷報告\n\n")
-        f.write(f"**測試時間:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"**硬體監控數據存放於:** `{csv_path}`\n\n")
+        f.write("# Hardware and System Log Comprehensive Diagnostic Report\n\n")
+        f.write(f"**Test Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"**Hardware Monitor Metrics stored in:** `{csv_path}`\n\n")
         
-        f.write("## 1. 系統日誌異常統計 (System Log Anomalies)\n")
+        f.write("## 1. System Log Anomalies Statistics\n")
         if log_summary['status'] == 'Success':
-            f.write(f"- **測試期間發現異常日誌總數:** {log_summary['total_errors_found']} 筆\n")
+            f.write(f"- **Total abnormal logs found during test:** {log_summary['total_errors_found']}\n")
             for err_type, count in log_summary['summary'].items():
-                f.write(f"  - `{err_type}`: {count} 次\n")
+                f.write(f"  - `{err_type}`: {count} times\n")
             
-            f.write("\n### 最新異常日誌樣本\n")
+            f.write("\n### Latest Abnormal Log Samples\n")
             f.write("```text\n")
             for log in log_summary['raw_logs']:
                 f.write(f"{log}\n")
             f.write("```\n\n")
         else:
-            f.write(f"日誌讀取失敗: {log_summary['status']}\n\n")
+            f.write(f"Log read failed: {log_summary['status']}\n\n")
             
-        # 新增 AI 分析結果區塊
-        f.write("## 2. AI 根本原因分析 (AI-Driven RCA)\n")
+        # Add AI analysis result section
+        f.write("## 2. AI-Driven Root Cause Analysis (RCA)\n")
         f.write(ai_analysis_result + "\n")
             
-    print(f"\n[系統] 綜合診斷報告已生成: {report_path}")
+    print(f"\n[System] Comprehensive diagnostic report generated: {report_path}")
 
 def generate_mock_syslog():
-    """在 /var/log 內生成模擬的 Linux 硬體與系統錯誤日誌 (共 10 筆)"""
+    """Generate mock Linux hardware and system error logs in /var/log (10 entries in total)"""
     mock_logs = [
         "Mar  4 10:00:01 ubuntu kernel: [Hardware Error]: Machine check events logged\n",
         "Mar  4 10:02:15 ubuntu kernel: ACPI Error: AE_NOT_FOUND, While resolving a named reference package element (20210730/dspkginit-438)\n",
@@ -186,15 +187,15 @@ def generate_mock_syslog():
         "Mar  4 10:15:00 ubuntu kernel: Normal operation resumed.\n"
     ]
     
-    # 直接寫入 Linux 預設的日誌路徑
+    # Write directly to Linux default log path
     with open("/var/log/syslog", "w", encoding="utf-8") as f:
         f.writelines(mock_logs)
-    print("[系統] 已生成模擬的 /var/log/syslog (包含 ACPI, MCE, PCIe 錯誤) 供解析器測試。")
+    print("[System] Mock /var/log/syslog (including ACPI, MCE, PCIe errors) generated for parser testing.")
 
 def main():
-    print("=== 韌體 PID 動態熱節流與日誌分析模擬 ===")
+    print("=== Firmware PID Dynamic Thermal Throttling & Log Analysis Simulation ===")
     
-    # 記錄測試開始時間
+    # Record test start time
     test_start_time = datetime.now()
     
     if os.path.exists(CSV_OUTPUT):
@@ -202,17 +203,17 @@ def main():
         
     run_thermal_throttling_test(duration_seconds=30, target_temp=55.0)
     
-    # 測試結束後，啟動日誌分析
-    print("\n[系統] 開始解析 Linux 系統日誌 (/var/log/syslog)...")
+    # After testing, start log analysis
+    print("\n[System] Starting to parse Linux system log (/var/log/syslog)...")
     generate_mock_syslog() 
     
     analyzer = LinuxLogAnalyzer()
     log_summary = analyzer.analyze_recent_logs()
     
-    # 啟動 AI 分析
-    ai_result = "無異常日誌，無需分析。"
+    # Start AI analysis
+    ai_result = "No abnormal logs, analysis not required."
     if log_summary.get('total_errors_found', 0) > 0:
-        print("[系統] 偵測到異常，正在呼叫 AI 進行根本原因分析...")
+        print("[System] Anomalies detected, calling AI for root cause analysis...")
         ai_agent = FirmwareAIAgent()
         ai_result = ai_agent.analyze_error_logs(log_summary['raw_logs'])
     

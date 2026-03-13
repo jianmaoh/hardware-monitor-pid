@@ -4,9 +4,9 @@
 
 using namespace std;
 
-// 讀取 Mac 傳遞過來的真實溫度
+// read the real temp of my mac
 float getRealTemperature() {
-    // 讀取掛載進來的共享檔案
+    // read the shared file
     ifstream file("/app/real_temp.txt"); 
     if (!file.is_open()) {
         return -1.0; 
@@ -16,7 +16,7 @@ float getRealTemperature() {
     file.close();
     return temp;
 }
-// 讀取系統記憶體資訊
+// read infos of mem
 void printMemoryInfo() {
     ifstream file("/proc/meminfo");
     string line;

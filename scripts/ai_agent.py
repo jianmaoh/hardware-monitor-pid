@@ -3,15 +3,15 @@ import os
 
 class FirmwareAIAgent:
     def __init__(self):
-        # 設定密鑰檔案的路徑
+        # Set the path for the API key file
         key_file_path = "/app/gemini_api_key.txt"
         self.api_key = None
         
-        # 1. 先嘗試讀取密鑰檔案 (本地開發環境)
+        # 1. Try reading the key file first (Local development environment)
         if os.path.exists(key_file_path):
             with open(key_file_path, 'r', encoding='utf-8') as f:
                 self.api_key = f.read().strip()
-        # 2. 如果檔案不存在，則嘗試讀取環境變數 (CI/CD 環境)
+        # 2. If the file does not exist, try reading the environment variable (CI/CD environment)
         else:
             self.api_key = os.environ.get("GEMINI_API_KEY")
                 
@@ -22,31 +22,30 @@ class FirmwareAIAgent:
             self.model = None
 
     def analyze_error_logs(self, logs_list):
-        """將錯誤日誌送交 AI 分析並回傳根本原因與建議"""
+        """Send error logs to AI for analysis and return root cause and recommendations"""
         if not self.model:
-            return "⚠️ 找不到 /app/gemini_api_key.txt 檔案，也未設定環境變數，跳過 AI 根本原因分析。"
+            return "⚠️ /app/gemini_api_key.txt not found and environment variable not set. Skipping AI root cause analysis."
             
         if not logs_list:
-            return "無異常日誌需分析。"
+            return "No abnormal logs to analyze."
 
         log_text = "\n".join(logs_list)
         
         prompt = f"""
-        你是一位任職於 HP 的資深系統韌體工程師 (Firmware Engineer)。
-        以下是壓力測試期間捕捉到的 Linux 系統異常日誌：
+        You are a Senior System Firmware Engineer at HP.
+        Below are the abnormal Linux system logs captured during stress testing:
         
         ```text
         {log_text}
         ```
         
-        請提供精簡的分析報告，包含以下兩個段落：
-        1. **根本原因分析 (Root Cause Analysis)**：判斷造成這些錯誤的底層硬體或作業系統原因。
-        2. **修復建議 (Action Items)**：條列式提供後續的排錯或修復步驟。
+        Please provide a concise analysis report containing the following two sections:
+        1. **Root Cause Analysis**: Determine the underlying hardware or OS causes of these errors.
+        2. **Action Items**: Provide a bulleted list of troubleshooting or repair steps.
         """
         
         try:
             response = self.model.generate_content(prompt)
             return response.text
         except Exception as e:
-            return f"AI 分析發生例外錯誤: {e}"
-
+            return f"AI analysis exception occurred: {e}"
